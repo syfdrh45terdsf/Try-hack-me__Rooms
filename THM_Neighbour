@@ -1,1 +1,7 @@
+Hi, today we have Neighbour (https://tryhackme.com/room/neighbour), this room is very easy
 
+1. You need to start the machine
+2. After you got the IP address of your lab machine u need to go to http://ip
+3. You have a website with a login page, you need to log in with login:guest password:guest
+4. After you have authenticated u need to open source-code, there u have text "<!-- use guest:guest credentials until registration is fixed. "admin" user account is off limits!!!!! -->" 
+5. You need to change the URL to "http://10.113.159.178/profile.php?user=admin" and we finished 
