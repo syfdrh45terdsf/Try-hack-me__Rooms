@@ -1,0 +1,11 @@
+Hi, today we have Overheard at Breakfast(https://tryhackme.com/room/hh-overheardatbreakfast-6f01793c)
+
+1.We need to look at the provided image to find the email address and Gravatar.
+2.Next, hash it in the format used by Gravatar—which is MD5—to get the hash, then insert it into the Gravatar profile URL. There we find another hash in Base64; decrypt it, and that’s it.
+
+
+
+
+
+
+
