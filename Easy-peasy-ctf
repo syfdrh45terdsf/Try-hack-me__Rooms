@@ -1,0 +1,25 @@
+Hi, today we have easy-peasy-ctf(https://tryhackme.com/room/easypeasyctf)
+
+1.First, perform a full port scan using Nmap (sudo nmap -p- -A your_ip_machine) and complete the first task.
+2.Next, scan the main IP to discover new files/directories: gobuster dir -u http://your_ip_machine/-w /usr/share/wordlists/dirb/common.txt
+3.We should discover the '/hidden' directory. Next, fuzz this specific path to find further subdirectories or files: gobuster dir -u http://your_ip_machine/hidden/ -w /usr/share/wordlists/dirb/common.txt
+4.There we will see http://your_ip_machine/hidden/whatever/. Next, follow this link and view the page source code.
+5.There you will see an encoded text; next, decode it from Base64 format to get the first flag.
+6.Next, navigate to the previously identified Apache port 65525 and open the robots.txt file (which is critical during a pentest). View the page source to find an encoded flag—decode it, and it's yours.
+7.And flag 3 can be found SIMPLY at http://10.113.165.59:65524/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
